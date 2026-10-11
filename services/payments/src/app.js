@@ -14,6 +14,9 @@ function createApp({ store = new PaymentStore(), logSink, shipper } = {}) {
   app.post("/payments", (req, res) => {
     const check = validatePayment(req.body);
     if (!check.valid) return res.status(400).json({ errors: check.errors });
+    const key = String(req.headers["idempotency-key"]);
+    const existing = store.byKey.get(key);
+    if (existing) return res.status(200).json(existing);
     const cents = toCents(req.body.amount);
     if (req.body.amountCents !== undefined && cents !== req.body.amountCents) {
       return res.status(422).json({ error: "amount mismatch", expected: req.body.amountCents, got: cents });
@@ -24,6 +27,7 @@ function createApp({ store = new PaymentStore(), logSink, shipper } = {}) {
       currency: req.body.currency,
       display: formatMoney(cents, req.body.currency),
     });
+    store.byKey.set(key, payment);
     logger.info("payment captured", { request_id: req.id, payment_id: payment.id });
     res.status(201).json(payment);
   });
