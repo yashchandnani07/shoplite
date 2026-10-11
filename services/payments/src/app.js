@@ -15,6 +15,9 @@ function createApp({ store = new PaymentStore(), logSink, shipper } = {}) {
     const check = validatePayment(req.body);
     if (!check.valid) return res.status(400).json({ errors: check.errors });
     const cents = toCents(req.body.amount);
+    if (req.body.amountCents !== undefined && cents !== req.body.amountCents) {
+      return res.status(422).json({ error: "amount mismatch", expected: req.body.amountCents, got: cents });
+    }
     const payment = store.create({
       orderId: req.body.orderId,
       amountCents: cents,
