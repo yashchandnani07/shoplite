@@ -50,3 +50,7 @@ A payment needs `orderId`, a positive `amount`, a supported `currency` (USD, EUR
 `POST /orders` accepts optional `notes`; `POST /orders/:id/cancel` accepts optional `reason`.
 
 `POST /payments` honours an `Idempotency-Key` header.
+
+## Operations
+
+Production: https://shoplite-demo.duckdns.org (CausalDeploy watches this deployment).
