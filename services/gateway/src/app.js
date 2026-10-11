@@ -37,6 +37,7 @@ function createApp({ ordersUrl = "http://orders:4002", paymentsUrl = "http://pay
   app.post("/payments/:id/refund",
     forward(paymentsUrl, (r) => `/payments/${encodeURIComponent(r.params.id)}/refund`, "POST"));
 
+  app.use((_req, res) => res.status(404).json({ error: "not found" }));
   app.use(obs.errorHandler({ logger, shipper }));
   return app;
 }
