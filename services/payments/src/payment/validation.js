@@ -2,7 +2,7 @@ const SUPPORTED_CURRENCIES = ["USD", "EUR", "GBP"];
 const METHOD_TYPES = ["card", "wallet"];
 
 // Upper bound for a single payment (fraud guard).
-const MAX_AMOUNT = 300;
+const MAX_AMOUNT = 30000;
 
 function validateAmount(payment) {
   if (!Number.isFinite(payment.amount) || payment.amount <= 0) return ["amount must be > 0"];
