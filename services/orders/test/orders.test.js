@@ -19,7 +19,8 @@ test("order flow with a stubbed payments service", async () => {
   const calls = [];
   const fetchImpl = async (url, opts) => {
     calls.push([url, opts.method, opts.headers["x-request-id"]]);
-    return { status: 201, json: async () => ({ id: "pay_1" }) };
+    const orderId = opts.body ? JSON.parse(opts.body).orderId : undefined;
+    return { status: 201, json: async () => ({ id: "pay_1", orderId }) };
   };
   const server = await listen(createApp({ fetchImpl, logSink: () => {} }));
   const b = `http://127.0.0.1:${server.address().port}`;

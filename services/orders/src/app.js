@@ -44,6 +44,11 @@ function createApp({ paymentsUrl = "http://payments:4003", fetchImpl = fetch, lo
         orders.set(order.id, order);
         return res.status(402).json({ order, payment: paid.data });
       }
+      if (paid.data.orderId !== order.id) {
+        order.status = "payment_failed";
+        orders.set(order.id, order);
+        return res.status(502).json({ error: "payment does not belong to order", order });
+      }
       order.status = "paid";
       order.paymentId = paid.data.id;
       orders.set(order.id, order);
