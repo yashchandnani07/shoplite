@@ -7,8 +7,12 @@ function createApp({ ordersUrl = "http://orders:4002", paymentsUrl = "http://pay
   const app = express();
   const logger = obs.createLogger("gateway", logSink);
   const metrics = new obs.Metrics("gateway");
-  app.use(express.json());
+  app.use(express.json({ limit: "100kb" }));
   obs.instrument(app, { service: "gateway", logger, metrics, shipper });
+  app.use((_req, res, next) => {
+    res.setHeader("x-content-type-options", "nosniff");
+    next();
+  });
 
   const forward = (base, path, method = "GET") => async (req, res, next) => {
     try {
@@ -33,6 +37,7 @@ function createApp({ ordersUrl = "http://orders:4002", paymentsUrl = "http://pay
   app.post("/payments/:id/refund",
     forward(paymentsUrl, (r) => `/payments/${encodeURIComponent(r.params.id)}/refund`, "POST"));
 
+  app.use((_req, res) => res.status(404).json({ error: "not found" }));
   app.use(obs.errorHandler({ logger, shipper }));
   return app;
 }

@@ -49,3 +49,11 @@ test("unhandled errors are logged with stack and request id, response is a 500",
   assert.ok(Array.isArray(err.stack) && err.stack.length > 0);
   gw.close();
 });
+
+test("gateway sets nosniff and returns JSON 404", async () => {
+  const gw = await listen(gateway.createApp({ logSink: () => {} }));
+  const r = await fetch(`${url(gw)}/nope`);
+  assert.strictEqual(r.status, 404);
+  assert.strictEqual(r.headers.get("x-content-type-options"), "nosniff");
+  gw.close();
+});
