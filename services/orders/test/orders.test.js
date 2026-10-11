@@ -54,3 +54,14 @@ test("product search filters by name", async () => {
   assert.deepStrictEqual((await r.json()).products.map((p) => p.id), ["p1"]);
   server.close();
 });
+
+test("a payment for another order is rejected with 502", async () => {
+  const fetchImpl = async () => ({ status: 201, json: async () => ({ id: "pay_x", orderId: "ord_other" }) });
+  const server = await listen(createApp({ fetchImpl, logSink: () => {} }));
+  const r = await fetch(`http://127.0.0.1:${server.address().port}/orders`, {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ items: [{ productId: "p1", quantity: 1 }] }),
+  });
+  assert.strictEqual(r.status, 502);
+  server.close();
+});
