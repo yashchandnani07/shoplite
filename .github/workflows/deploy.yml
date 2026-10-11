@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
 concurrency: { group: deploy-prod, cancel-in-progress: false }
 permissions:
+  id-token: write
   contents: read
   packages: write
   deployments: write
@@ -55,14 +56,24 @@ jobs:
             docker build -f services/$s/Dockerfile -t $REGISTRY/shoplite-$s:$GITHUB_SHA .
             docker push $REGISTRY/shoplite-$s:$GITHUB_SHA
           done
-      - name: Deploy to prod host
-        env:
-          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          HOST: ${{ vars.DEPLOY_HOST }}
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+      - name: Deploy to prod host (SSM, no SSH keys)
+        env: { GHCR_TOKEN: "${{ github.token }}" }
         run: |
-          install -m 600 /dev/null key && echo "$SSH_KEY" > key
-          scp -i key -o StrictHostKeyChecking=accept-new docker-compose.prod.yml "ubuntu@$HOST:/opt/shoplite/docker-compose.yml"
-          ssh -i key "ubuntu@$HOST" "cd /opt/shoplite && TAG=$GITHUB_SHA REGISTRY=$REGISTRY docker compose pull && TAG=$GITHUB_SHA REGISTRY=$REGISTRY docker compose up -d --remove-orphans"
+          {
+            echo 'set -euo pipefail'
+            echo 'mkdir -p /opt/shoplite && cd /opt/shoplite'
+            echo "base64 -d > docker-compose.yml <<'B64'"; base64 -w0 docker-compose.prod.yml; echo; echo B64
+            echo "echo '$GHCR_TOKEN' | docker login ghcr.io -u '${{ github.actor }}' --password-stdin"
+            echo "export TAG=$GITHUB_SHA REGISTRY=$REGISTRY"
+            echo "grep -q CAUSALDEPLOY_URL .env 2>/dev/null || echo 'CAUSALDEPLOY_URL=https://${{ vars.PUBLIC_DOMAIN }}' >> .env"
+            echo 'docker compose pull && docker compose up -d --remove-orphans'
+          } > remote.sh
+          chmod +x scripts/ssm-run.sh
+          ./scripts/ssm-run.sh "${{ vars.DEPLOY_INSTANCE_ID }}" remote.sh
       - name: Wait for healthy
         run: |
           for i in $(seq 1 30); do
@@ -75,9 +86,16 @@ jobs:
           state=$([ "${{ job.status }}" = "success" ] && echo success || echo failure)
           gh api "repos/$GITHUB_REPOSITORY/deployments/${{ steps.dep.outputs.id }}/statuses" \
             -f state=$state -f environment_url="https://${{ vars.PUBLIC_DOMAIN }}"
-      - name: Announce deployment to CausalDeploy
-        if: always() && vars.CAUSALDEPLOY_URL != ''
+      - name: Announce deployment to CausalDeploy (from the host, which holds the ingest key)
+        if: always()
         run: |
-          curl -fsS -X POST "${{ vars.CAUSALDEPLOY_URL }}/api/v1/events" \
-            -H "x-api-key: ${{ secrets.CAUSALDEPLOY_API_KEY }}" -H 'content-type: application/json' \
-            -d "[{\"type\":\"deployment\",\"repo\":\"$GITHUB_REPOSITORY\",\"id\":\"${{ steps.dep.outputs.id }}\",\"env\":\"production\",\"services\":[\"gateway\",\"orders\",\"payments\"],\"sha_from\":\"${{ steps.prev.outputs.sha }}\",\"sha_to\":\"$GITHUB_SHA\",\"started_at\":\"$(date -u +%FT%TZ)\",\"finished_at\":\"$(date -u +%FT%TZ)\",\"status\":\"${{ job.status == 'success' && 'success' || 'failure' }}\"}]" || true
+          now=$(date -u +%FT%TZ)
+          status=${{ job.status == 'success' && 'success' || 'failure' }}
+          cat > announce.sh <<EOF
+          set -euo pipefail
+          . /opt/shoplite/.env
+          curl -fsS -X POST "\$CAUSALDEPLOY_URL/api/v1/events" -H "x-api-key: \$CAUSALDEPLOY_API_KEY" \
+            -H 'content-type: application/json' \
+            -d '[{"type":"deployment","repo":"$GITHUB_REPOSITORY","id":"${{ steps.dep.outputs.id }}","env":"production","services":["gateway","orders","payments"],"sha_from":"${{ steps.prev.outputs.sha }}","sha_to":"$GITHUB_SHA","started_at":"$now","finished_at":"$now","status":"'$status'"}]'
+          EOF
+          ./scripts/ssm-run.sh "${{ vars.DEPLOY_INSTANCE_ID }}" announce.sh || true
