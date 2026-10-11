@@ -1,5 +1,7 @@
 # ShopLite
 
+Node 22 or 24.
+
 Demo target application for [CausalDeploy](https://github.com/akkki007/deploy-agent): a small
 multi-service shop that we deploy for real and break in controlled, ground-truth-labelled ways.
 
