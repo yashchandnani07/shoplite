@@ -10,7 +10,7 @@ client -> gateway :4001 -> orders :4002 -> payments :4003      shared: money-uti
 | Service | Endpoints |
 |---|---|
 | gateway | `GET /products`, `GET /products/:id`, `POST /orders`, `GET /orders`, `GET /orders/:id`, `POST /orders/:id/cancel`, `GET /payments/:id`, `POST /payments/:id/refund` |
-| orders | same order/product routes, calls payments |
+| orders | same order/product routes (`GET /products?q=` searches by name), calls payments |
 | payments | `POST /payments` (`payment/validation.js::validatePayment`), `GET /payments`, `GET /payments/:id`, `POST /payments/:id/refund` |
 | all | `GET /health`, `GET /metrics` (Prometheus text) |
 

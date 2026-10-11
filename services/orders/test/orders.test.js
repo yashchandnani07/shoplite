@@ -46,3 +46,10 @@ test("empty cart is rejected", async () => {
   assert.strictEqual(r.status, 400);
   server.close();
 });
+
+test("product search filters by name", async () => {
+  const server = await listen(createApp({ logSink: () => {} }));
+  const r = await fetch(`http://127.0.0.1:${server.address().port}/products?q=key`);
+  assert.deepStrictEqual((await r.json()).products.map((p) => p.id), ["p1"]);
+  server.close();
+});
