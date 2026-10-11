@@ -2,17 +2,35 @@ name: health-check
 on:
   schedule: [{ cron: "*/5 * * * *" }]
   workflow_dispatch:
+permissions:
+  id-token: write
+  contents: read
 jobs:
   probe:
     runs-on: ubuntu-latest
-    if: vars.PUBLIC_DOMAIN != '' && vars.CAUSALDEPLOY_URL != ''
+    if: vars.PUBLIC_DOMAIN != '' && vars.DEPLOY_INSTANCE_ID != ''
     steps:
-      - name: Probe prod and report to CausalDeploy
+      - uses: actions/checkout@v4
+      - name: Probe production from outside AWS
+        id: probe
         run: |
           start=$(date +%s%N)
           code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "https://${{ vars.PUBLIC_DOMAIN }}/products" || echo 000)
-          ms=$(( ($(date +%s%N) - start) / 1000000 ))
-          ok=false; [ "$code" = "200" ] && ok=true
-          curl -fsS -X POST "${{ vars.CAUSALDEPLOY_URL }}/api/v1/events" \
-            -H "x-api-key: ${{ secrets.CAUSALDEPLOY_API_KEY }}" -H 'content-type: application/json' \
-            -d "[{\"type\":\"health\",\"repo\":\"$GITHUB_REPOSITORY\",\"service\":\"gateway\",\"env\":\"production\",\"ts\":\"$(date -u +%FT%TZ)\",\"ok\":$ok,\"latency_ms\":$ms,\"status_code\":$code}]"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          echo "ms=$(( ($(date +%s%N) - start) / 1000000 ))" >> "$GITHUB_OUTPUT"
+          [ "$code" = "200" ] && echo "ok=true" >> "$GITHUB_OUTPUT" || echo "ok=false" >> "$GITHUB_OUTPUT"
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+      - name: Report to CausalDeploy (from the host, which holds the ingest key)
+        run: |
+          cat > report.sh <<EOF
+          set -euo pipefail
+          . /opt/shoplite/.env
+          curl -fsS -X POST "\$CAUSALDEPLOY_URL/api/v1/events" -H "x-api-key: \$CAUSALDEPLOY_API_KEY" \\
+            -H 'content-type: application/json' \\
+            -d '[{"type":"health","repo":"$GITHUB_REPOSITORY","service":"gateway","env":"production","ts":"'"\$(date -u +%FT%TZ)"'","ok":${{ steps.probe.outputs.ok }},"latency_ms":${{ steps.probe.outputs.ms }},"status_code":${{ steps.probe.outputs.code }}}]'
+          EOF
+          chmod +x scripts/ssm-run.sh
+          ./scripts/ssm-run.sh "${{ vars.DEPLOY_INSTANCE_ID }}" report.sh
