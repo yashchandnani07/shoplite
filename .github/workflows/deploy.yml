@@ -40,13 +40,12 @@ jobs:
           echo "sha=${prev}" >> "$GITHUB_OUTPUT"
       - name: Create GitHub Deployment
         id: dep
-        env: { GH_TOKEN: "${{ github.token }}" }
+        env: { GH_TOKEN: "${{ github.token }}", PREV: "${{ steps.prev.outputs.sha }}" }
         run: |
-          id=$(gh api "repos/$GITHUB_REPOSITORY/deployments" -f ref="$GITHUB_SHA" \
-            -f environment=production -F auto_merge=false -F required_contexts[]= \
-            -f description="sha_from=${{ steps.prev.outputs.sha }}" \
-            -f payload="{\"sha_from\":\"${{ steps.prev.outputs.sha }}\",\"sha_to\":\"$GITHUB_SHA\"}" \
-            --jq .id)
+          id=$(jq -n --arg ref "$GITHUB_SHA" --arg from "$PREV" --arg to "$GITHUB_SHA" \
+            '{ref: $ref, environment: "production", auto_merge: false, required_contexts: [],
+              description: "shoplite production deploy", payload: {sha_from: $from, sha_to: $to}}' \
+            | gh api "repos/$GITHUB_REPOSITORY/deployments" --input - --jq .id)
           echo "id=$id" >> "$GITHUB_OUTPUT"
       - uses: docker/login-action@v3
         with: { registry: ghcr.io, username: "${{ github.actor }}", password: "${{ github.token }}" }
@@ -80,14 +79,14 @@ jobs:
             curl -fsS "https://${{ vars.PUBLIC_DOMAIN }}/health" && exit 0; sleep 5
           done; exit 1
       - name: Record deployment status
-        if: always()
+        if: always() && steps.dep.outputs.id != ''
         env: { GH_TOKEN: "${{ github.token }}" }
         run: |
           state=$([ "${{ job.status }}" = "success" ] && echo success || echo failure)
           gh api "repos/$GITHUB_REPOSITORY/deployments/${{ steps.dep.outputs.id }}/statuses" \
             -f state=$state -f environment_url="https://${{ vars.PUBLIC_DOMAIN }}"
       - name: Announce deployment to CausalDeploy (from the host, which holds the ingest key)
-        if: always()
+        if: always() && steps.dep.outputs.id != '' && vars.CAUSALDEPLOY_URL != ''
         run: |
           now=$(date -u +%FT%TZ)
           status=${{ job.status == 'success' && 'success' || 'failure' }}
