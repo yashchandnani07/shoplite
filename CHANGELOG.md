@@ -5,3 +5,4 @@
 - Payment integrity: amountCents check, payment/order ownership check.
 - Orders pricing refactor.
 - Gateway hardening.
+- Payment validation helpers and amount ceiling.

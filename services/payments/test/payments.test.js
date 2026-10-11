@@ -50,3 +50,8 @@ test("amount that disagrees with amountCents is a 422", async () => {
   assert.strictEqual(r.status, 422);
   server.close();
 });
+
+test("amounts above the ceiling are rejected", () => {
+  const big = { orderId: "o1", amount: 1000, currency: "USD", method: { type: "card" } };
+  assert.strictEqual(validatePayment(big).valid, false);
+});

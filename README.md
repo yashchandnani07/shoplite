@@ -40,3 +40,7 @@ Scenarios, injector and ground truth: [`scenarios/`](scenarios/README.md). Seede
 ## Request flow
 
 `POST /orders` -> gateway forwards to orders -> orders prices the cart and calls payments -> payments validates and captures.
+
+## Payment validation
+
+A payment needs `orderId`, a positive `amount`, a supported `currency` (USD, EUR, GBP) and `method.type` of `card` or `wallet`. Amounts above the ceiling are rejected.
