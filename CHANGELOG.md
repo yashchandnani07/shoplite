@@ -4,3 +4,4 @@
 - Docs, editorconfig, contributing guide.
 - Payment integrity: amountCents check, payment/order ownership check.
 - Orders pricing refactor.
+- Gateway hardening.
