@@ -1,7 +1,7 @@
 const { toCents, addCents, applyTax } = require("money-utils");
 const { byId } = require("./catalog");
 
-const TAX_RATE = 0.08;
+const { TAX_RATE } = require("./config");
 
 function priceOrder(items) {
   const lines = items.map((item) => {
