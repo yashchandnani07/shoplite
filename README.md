@@ -36,3 +36,7 @@ node loadgen/loadgen.js --mode baseline --target http://localhost:4001 --duratio
 | `verify.yml` | `workflow_call` / manual | bring up staging from any ref and run the baseline load; used by CausalDeploy to verify fixes |
 
 Scenarios, injector and ground truth: [`scenarios/`](scenarios/README.md). Seeded history: [`docs/history.md`](docs/history.md).
+
+## Request flow
+
+`POST /orders` -> gateway forwards to orders -> orders prices the cart and calls payments -> payments validates and captures.
