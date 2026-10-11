@@ -9,3 +9,4 @@
 - Express 4.21, Node 22/24 matrix.
 - Fixed payment ceiling.
 - Order notes and cancellation reason.
+- money-utils 2.0.0.
