@@ -71,3 +71,19 @@ test("priceOrder over several products", () => {
   assert.strictEqual(p.subtotalCents, 28350);
   assert.strictEqual(p.totalCents, 30618);
 });
+
+test("notes are kept and cancel records a reason", async () => {
+  const fetchImpl = async (_u, opts) => ({
+    status: 201, json: async () => ({ id: "pay_2", orderId: opts.body ? JSON.parse(opts.body).orderId : undefined }),
+  });
+  const server = await listen(createApp({ fetchImpl, logSink: () => {} }));
+  const b = `http://127.0.0.1:${server.address().port}`;
+  const h = { "content-type": "application/json" };
+  const o = await (await fetch(`${b}/orders`, { method: "POST", headers: h,
+    body: JSON.stringify({ items: [{ productId: "p4", quantity: 1 }], notes: "gift" }) })).json();
+  assert.strictEqual(o.notes, "gift");
+  const c = await (await fetch(`${b}/orders/${o.id}/cancel`, { method: "POST", headers: h,
+    body: JSON.stringify({ reason: "changed_mind" }) })).json();
+  assert.strictEqual(c.cancelReason, "changed_mind");
+  server.close();
+});
