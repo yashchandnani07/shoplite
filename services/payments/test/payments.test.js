@@ -60,3 +60,15 @@ test("a 500 payment is within the ceiling", () => {
   const ok = { orderId: "o1", amount: 500, currency: "USD", method: { type: "card" } };
   assert.strictEqual(validatePayment(ok).valid, true);
 });
+
+test("the same idempotency key returns the original payment", async () => {
+  const server = await listen(createApp({ logSink: () => {} }));
+  const send = () => fetch(`${base(server)}/payments`, {
+    method: "POST", headers: { "content-type": "application/json", "idempotency-key": "k-1" },
+    body: JSON.stringify({ orderId: "o1", amount: 10, currency: "USD", method: { type: "card" } }),
+  });
+  const a = await (await send()).json();
+  const b = await (await send()).json();
+  assert.strictEqual(a.id, b.id);
+  server.close();
+});

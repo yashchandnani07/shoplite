@@ -3,6 +3,7 @@ const crypto = require("node:crypto");
 class PaymentStore {
   constructor() {
     this.payments = new Map();
+    this.byKey = new Map();
   }
   create(fields) {
     const payment = { id: `pay_${crypto.randomBytes(6).toString("hex")}`, status: "captured", ...fields };
