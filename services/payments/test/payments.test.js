@@ -40,3 +40,13 @@ test("invalid payment is a 400 with reasons", async () => {
   assert.ok((await r.json()).errors.length > 0);
   server.close();
 });
+
+test("amount that disagrees with amountCents is a 422", async () => {
+  const server = await listen(createApp({ logSink: () => {} }));
+  const r = await fetch(`${base(server)}/payments`, {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ orderId: "o1", amount: 10, amountCents: 999, currency: "USD", method: { type: "card" } }),
+  });
+  assert.strictEqual(r.status, 422);
+  server.close();
+});
