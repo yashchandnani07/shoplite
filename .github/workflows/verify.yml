@@ -1,0 +1,30 @@
+name: verify
+on:
+  workflow_call:
+    inputs:
+      ref: { type: string, required: true }
+      mode: { type: string, default: baseline }
+  workflow_dispatch:
+    inputs:
+      ref: { description: Git ref to verify, required: true }
+      mode: { description: baseline | replay, default: baseline }
+jobs:
+  staging:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: "${{ inputs.ref }}" }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci && npm test
+      - name: Ephemeral staging
+        run: |
+          docker compose up -d --build
+          for i in $(seq 1 30); do curl -fsS localhost:4001/health && break; sleep 2; done
+      - name: Drive traffic and compare error rate to baseline
+        run: node loadgen/loadgen.js --mode ${{ inputs.mode }} --target http://localhost:4001 --duration 30 --max-error-rate 0.01 --report report.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: verification-report, path: report.json }
+      - if: always()
+        run: docker compose down

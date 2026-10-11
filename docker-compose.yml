@@ -1,0 +1,22 @@
+services:
+  payments:
+    build: { context: ., dockerfile: services/payments/Dockerfile }
+    environment: &telemetry
+      CAUSALDEPLOY_URL: ${CAUSALDEPLOY_URL:-}
+      CAUSALDEPLOY_API_KEY: ${CAUSALDEPLOY_API_KEY:-}
+      GITHUB_REPOSITORY: ${GITHUB_REPOSITORY:-yashchandnani07/shoplite}
+      DEPLOY_ENV: ${DEPLOY_ENV:-prod}
+  orders:
+    build: { context: ., dockerfile: services/orders/Dockerfile }
+    environment:
+      <<: *telemetry
+      PAYMENTS_URL: http://payments:4003
+    depends_on: [payments]
+  gateway:
+    build: { context: ., dockerfile: services/gateway/Dockerfile }
+    environment:
+      <<: *telemetry
+      ORDERS_URL: http://orders:4002
+      PAYMENTS_URL: http://payments:4003
+    ports: ["${GATEWAY_PORT:-4001}:4001"]
+    depends_on: [orders, payments]

@@ -1,0 +1,30 @@
+# Runs on the prod host (/opt/shoplite). TAG and REGISTRY are set by the deploy workflow.
+# Joins the `edge` network so the Caddy reverse proxy (CausalDeploy stack) can reach `gateway`.
+services:
+  payments:
+    image: ${REGISTRY}/shoplite-payments:${TAG}
+    restart: unless-stopped
+    environment: &telemetry
+      CAUSALDEPLOY_URL: ${CAUSALDEPLOY_URL:-}
+      CAUSALDEPLOY_API_KEY: ${CAUSALDEPLOY_API_KEY:-}
+      GITHUB_REPOSITORY: yashchandnani07/shoplite
+      DEPLOY_ENV: production
+    networks: [default]
+  orders:
+    image: ${REGISTRY}/shoplite-orders:${TAG}
+    restart: unless-stopped
+    environment:
+      <<: *telemetry
+      PAYMENTS_URL: http://payments:4003
+    networks: [default]
+  gateway:
+    image: ${REGISTRY}/shoplite-gateway:${TAG}
+    restart: unless-stopped
+    environment:
+      <<: *telemetry
+      ORDERS_URL: http://orders:4002
+      PAYMENTS_URL: http://payments:4003
+    networks: [default, edge]
+networks:
+  edge:
+    external: true

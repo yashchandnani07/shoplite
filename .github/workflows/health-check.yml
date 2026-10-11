@@ -1,0 +1,18 @@
+name: health-check
+on:
+  schedule: [{ cron: "*/5 * * * *" }]
+  workflow_dispatch:
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    if: vars.PUBLIC_DOMAIN != '' && vars.CAUSALDEPLOY_URL != ''
+    steps:
+      - name: Probe prod and report to CausalDeploy
+        run: |
+          start=$(date +%s%N)
+          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "https://${{ vars.PUBLIC_DOMAIN }}/products" || echo 000)
+          ms=$(( ($(date +%s%N) - start) / 1000000 ))
+          ok=false; [ "$code" = "200" ] && ok=true
+          curl -fsS -X POST "${{ vars.CAUSALDEPLOY_URL }}/api/v1/events" \
+            -H "x-api-key: ${{ secrets.CAUSALDEPLOY_API_KEY }}" -H 'content-type: application/json' \
+            -d "[{\"type\":\"health\",\"repo\":\"$GITHUB_REPOSITORY\",\"service\":\"gateway\",\"env\":\"production\",\"ts\":\"$(date -u +%FT%TZ)\",\"ok\":$ok,\"latency_ms\":$ms,\"status_code\":$code}]"
