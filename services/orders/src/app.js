@@ -27,13 +27,14 @@ function createApp({ paymentsUrl = "http://payments:4003", fetchImpl = fetch, lo
 
   app.post("/orders", async (req, res, next) => {
     try {
-      const { items, currency = "USD", method = { type: "card" } } = req.body || {};
+      const { items, notes, currency = "USD", method = { type: "card" } } = req.body || {};
       if (!Array.isArray(items) || items.length === 0) {
         return res.status(400).json({ error: "items required" });
       }
       const priced = priceOrder(items);
       logger.info("order priced", { request_id: req.id, total_cents: priced.totalCents });
-      const order = { id: `ord_${crypto.randomBytes(5).toString("hex")}`, status: "pending", ...priced };
+      const order = { id: `ord_${crypto.randomBytes(5).toString("hex")}`, status: "pending", ...priced,
+        notes: typeof notes === "string" ? notes.trim().slice(0, 200) : undefined };
       const paid = await obs.callJson(`${paymentsUrl}/payments`, {
         method: "POST", requestId: req.id, fetchImpl,
         body: {
@@ -76,6 +77,7 @@ function createApp({ paymentsUrl = "http://payments:4003", fetchImpl = fetch, lo
       await obs.callJson(`${paymentsUrl}/payments/${order.paymentId}/refund`, {
         method: "POST", requestId: req.id, fetchImpl,
       });
+      order.cancelReason = (req.body && req.body.reason) || "customer_request";
       order.status = "cancelled";
       res.json(order);
     } catch (err) {

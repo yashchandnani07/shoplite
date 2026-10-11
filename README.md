@@ -46,3 +46,5 @@ Scenarios, injector and ground truth: [`scenarios/`](scenarios/README.md). Seede
 ## Payment validation
 
 A payment needs `orderId`, a positive `amount`, a supported `currency` (USD, EUR, GBP) and `method.type` of `card` or `wallet`. Amounts above the ceiling are rejected.
+
+`POST /orders` accepts optional `notes`; `POST /orders/:id/cancel` accepts optional `reason`.
