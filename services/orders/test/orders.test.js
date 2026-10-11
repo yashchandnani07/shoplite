@@ -19,7 +19,8 @@ test("order flow with a stubbed payments service", async () => {
   const calls = [];
   const fetchImpl = async (url, opts) => {
     calls.push([url, opts.method, opts.headers["x-request-id"]]);
-    return { status: 201, json: async () => ({ id: "pay_1" }) };
+    const orderId = opts.body ? JSON.parse(opts.body).orderId : undefined;
+    return { status: 201, json: async () => ({ id: "pay_1", orderId }) };
   };
   const server = await listen(createApp({ fetchImpl, logSink: () => {} }));
   const b = `http://127.0.0.1:${server.address().port}`;
@@ -51,5 +52,16 @@ test("product search filters by name", async () => {
   const server = await listen(createApp({ logSink: () => {} }));
   const r = await fetch(`http://127.0.0.1:${server.address().port}/products?q=key`);
   assert.deepStrictEqual((await r.json()).products.map((p) => p.id), ["p1"]);
+  server.close();
+});
+
+test("a payment for another order is rejected with 502", async () => {
+  const fetchImpl = async () => ({ status: 201, json: async () => ({ id: "pay_x", orderId: "ord_other" }) });
+  const server = await listen(createApp({ fetchImpl, logSink: () => {} }));
+  const r = await fetch(`http://127.0.0.1:${server.address().port}/orders`, {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ items: [{ productId: "p1", quantity: 1 }] }),
+  });
+  assert.strictEqual(r.status, 502);
   server.close();
 });

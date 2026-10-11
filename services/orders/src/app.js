@@ -35,12 +35,19 @@ function createApp({ paymentsUrl = "http://payments:4003", fetchImpl = fetch, lo
       const order = { id: `ord_${crypto.randomBytes(5).toString("hex")}`, status: "pending", ...priced };
       const paid = await obs.callJson(`${paymentsUrl}/payments`, {
         method: "POST", requestId: req.id, fetchImpl,
-        body: { orderId: order.id, amount: fromCents(order.totalCents), currency, method },
+        body: {
+          orderId: order.id, amount: fromCents(order.totalCents), amountCents: order.totalCents, currency, method,
+        },
       });
       if (paid.status !== 201) {
         order.status = "payment_failed";
         orders.set(order.id, order);
         return res.status(402).json({ order, payment: paid.data });
+      }
+      if (paid.data.orderId !== order.id) {
+        order.status = "payment_failed";
+        orders.set(order.id, order);
+        return res.status(502).json({ error: "payment does not belong to order", order });
       }
       order.status = "paid";
       order.paymentId = paid.data.id;
