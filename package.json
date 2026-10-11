@@ -3,12 +3,22 @@
   "private": true,
   "version": "1.0.0",
   "description": "ShopLite: demo target application for CausalDeploy",
-  "workspaces": ["lib/*", "services/*"],
+  "workspaces": [
+    "lib/*",
+    "services/*"
+  ],
   "scripts": {
-    "test": "node --test --test-force-exit \"lib/*/test/*.test.js\" \"services/*/test/*.test.js\" \"loadgen/test/*.test.js\"",
+    "test": "node --test --test-force-exit \"lib/*/test/*.test.js\" \"services/*/test/*.test.js\" \"loadgen/test/*.test.js\" \"scenarios/test/*.test.js\"",
     "start:gateway": "node services/gateway/src/server.js",
     "start:orders": "node services/orders/src/server.js",
-    "start:payments": "node services/payments/src/server.js"
+    "start:payments": "node services/payments/src/server.js",
+    "inject": "node scenarios/inject.js",
+    "verify:scenarios": "node scenarios/verify.js"
   },
-  "engines": { "node": ">=20" }
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "yaml": "^2.9.1"
+  }
 }

@@ -2,7 +2,7 @@
 // Weighted traffic generator with record/replay.
 //   --mode baseline|spike|replay   --target URL   --duration SECONDS
 //   --rate RPS (default 10, spike x5)   --record FILE   --replay FILE
-//   --report FILE   --max-error-rate 0.01   --seed N
+//   --report FILE   --max-error-rate 0.01   --seed N   --notes-numeric FRACTION
 const fs = require("node:fs");
 
 function parseArgs(argv) {
@@ -10,7 +10,7 @@ function parseArgs(argv) {
   for (let i = 0; i < argv.length; i += 2) {
     const k = argv[i].replace(/^--/, "").replace(/-([a-z])/g, (_, c) => c.toUpperCase());
     const v = argv[i + 1];
-    out[k] = ["duration", "rate", "seed", "maxErrorRate"].includes(k) ? Number(v) : v;
+    out[k] = ["duration", "rate", "seed", "maxErrorRate", "notesNumeric"].includes(k) ? Number(v) : v;
   }
   return out;
 }
@@ -47,6 +47,17 @@ function pick(r, arr) {
 function order(r, extra, maxQty = 3, product) {
   const items = [{ productId: product || pick(r, PRODUCTS), quantity: 1 + Math.floor(r() * maxQty) }];
   return { method: "POST", path: "/orders", body: { items, ...extra } };
+}
+
+// Traffic shift: a fraction of orders carry numeric `notes` (a client bug we want to surface).
+function shifted(next, fraction, r) {
+  return () => {
+    const req = next();
+    if (req.method === "POST" && req.path === "/orders" && req.body.items.length && r() < fraction) {
+      return { ...req, body: { ...req.body, notes: 12345 } };
+    }
+    return req;
+  };
 }
 
 function planner(seed) {
@@ -86,6 +97,7 @@ async function run(opts) {
     next = () => recorded[i++ % recorded.length];
   } else {
     next = planner(opts.seed);
+    if (opts.notesNumeric) next = shifted(next, opts.notesNumeric, rng(opts.seed + 1));
   }
   const rate = opts.mode === "spike" ? opts.rate * 5 : opts.rate;
   const recording = opts.record ? fs.createWriteStream(opts.record) : null;
