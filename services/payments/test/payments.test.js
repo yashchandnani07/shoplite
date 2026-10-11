@@ -55,3 +55,8 @@ test("amounts above the ceiling are rejected", () => {
   const big = { orderId: "o1", amount: 40000, currency: "USD", method: { type: "card" } };
   assert.strictEqual(validatePayment(big).valid, false);
 });
+
+test("a 500 payment is within the ceiling", () => {
+  const ok = { orderId: "o1", amount: 500, currency: "USD", method: { type: "card" } };
+  assert.strictEqual(validatePayment(ok).valid, true);
+});
