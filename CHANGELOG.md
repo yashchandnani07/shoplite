@@ -8,3 +8,4 @@
 - Payment validation helpers and amount ceiling.
 - Express 4.21, Node 22/24 matrix.
 - Fixed payment ceiling.
+- Order notes and cancellation reason.
