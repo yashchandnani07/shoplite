@@ -13,7 +13,11 @@ function createApp({ paymentsUrl = "http://payments:4003", fetchImpl = fetch, lo
   app.use(express.json());
   obs.instrument(app, { service: "orders", logger, metrics, shipper });
 
-  app.get("/products", (_req, res) => res.json({ products: PRODUCTS }));
+  app.get("/products", (req, res) => {
+    const q = String(req.query.q || "").toLowerCase();
+    const products = q ? PRODUCTS.filter((p) => p.name.toLowerCase().includes(q)) : PRODUCTS;
+    res.json({ products });
+  });
 
   app.get("/products/:id", (req, res) => {
     const product = byId(req.params.id);
