@@ -34,7 +34,7 @@ function createApp({ paymentsUrl = "http://payments:4003", fetchImpl = fetch, lo
       const priced = priceOrder(items);
       logger.info("order priced", { request_id: req.id, total_cents: priced.totalCents });
       const order = { id: `ord_${crypto.randomBytes(5).toString("hex")}`, status: "pending", ...priced,
-        notes: typeof notes === "string" ? notes.slice(0, 200) : undefined };
+        notes: typeof notes === "string" ? notes.trim().slice(0, 200) : undefined };
       const paid = await obs.callJson(`${paymentsUrl}/payments`, {
         method: "POST", requestId: req.id, fetchImpl,
         body: {
