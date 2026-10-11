@@ -65,3 +65,9 @@ test("a payment for another order is rejected with 502", async () => {
   assert.strictEqual(r.status, 502);
   server.close();
 });
+
+test("priceOrder over several products", () => {
+  const p = priceOrder([{ productId: "p2", quantity: 1 }, { productId: "p3", quantity: 1 }]);
+  assert.strictEqual(p.subtotalCents, 28350);
+  assert.strictEqual(p.totalCents, 30618);
+});
