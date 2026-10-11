@@ -72,3 +72,15 @@ test("the same idempotency key returns the original payment", async () => {
   assert.strictEqual(a.id, b.id);
   server.close();
 });
+
+test("payments without an idempotency key are distinct", async () => {
+  const server = await listen(createApp({ logSink: () => {} }));
+  const send = (orderId) => fetch(`${base(server)}/payments`, {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ orderId, amount: 10, currency: "USD", method: { type: "card" } }),
+  });
+  const a = await (await send("o1")).json();
+  const b = await (await send("o2")).json();
+  assert.notStrictEqual(a.id, b.id);
+  server.close();
+});
