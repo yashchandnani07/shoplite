@@ -1,8 +1,13 @@
 const SUPPORTED_CURRENCIES = ["USD", "EUR", "GBP"];
 const METHOD_TYPES = ["card", "wallet"];
 
+// Upper bound for a single payment (fraud guard).
+const MAX_AMOUNT = 300;
+
 function validateAmount(payment) {
-  return Number.isFinite(payment.amount) && payment.amount > 0 ? [] : ["amount must be > 0"];
+  if (!Number.isFinite(payment.amount) || payment.amount <= 0) return ["amount must be > 0"];
+  if (payment.amount > MAX_AMOUNT) return ["amount exceeds limit"];
+  return [];
 }
 
 function validateCurrency(payment) {
