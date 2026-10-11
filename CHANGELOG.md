@@ -11,3 +11,4 @@
 - Order notes and cancellation reason.
 - money-utils 2.0.0.
 - Idempotency keys.
+- Fixed idempotency without key.
