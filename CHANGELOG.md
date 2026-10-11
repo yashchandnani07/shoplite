@@ -6,3 +6,4 @@
 - Orders pricing refactor.
 - Gateway hardening.
 - Payment validation helpers and amount ceiling.
+- Express 4.21, Node 22/24 matrix.
