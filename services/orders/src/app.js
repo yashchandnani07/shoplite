@@ -77,6 +77,7 @@ function createApp({ paymentsUrl = "http://payments:4003", fetchImpl = fetch, lo
       await obs.callJson(`${paymentsUrl}/payments/${order.paymentId}/refund`, {
         method: "POST", requestId: req.id, fetchImpl,
       });
+      order.cancelReason = (req.body && req.body.reason) || "customer_request";
       order.status = "cancelled";
       res.json(order);
     } catch (err) {
