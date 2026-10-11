@@ -32,6 +32,7 @@ function createApp({ paymentsUrl = "http://payments:4003", fetchImpl = fetch, lo
         return res.status(400).json({ error: "items required" });
       }
       const priced = priceOrder(items);
+      logger.info("order priced", { request_id: req.id, total_cents: priced.totalCents });
       const order = { id: `ord_${crypto.randomBytes(5).toString("hex")}`, status: "pending", ...priced };
       const paid = await obs.callJson(`${paymentsUrl}/payments`, {
         method: "POST", requestId: req.id, fetchImpl,
