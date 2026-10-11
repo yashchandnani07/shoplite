@@ -17,13 +17,13 @@ test("validatePayment accepts a valid payment and rejects bad ones", () => {
 test("capture, fetch and refund a payment", async () => {
   const server = await listen(createApp({ logSink: () => {} }));
   const b = base(server);
-  const body = { orderId: "o1", amount: 19.99, currency: "EUR", method: { type: "wallet" } };
+  const body = { orderId: "o1", amount: 19.5, currency: "EUR", method: { type: "wallet" } };
   const created = await fetch(`${b}/payments`, {
     method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body),
   });
   assert.strictEqual(created.status, 201);
   const pay = await created.json();
-  assert.strictEqual(pay.amountCents, 1999);
+  assert.strictEqual(pay.amountCents, 1950);
   assert.strictEqual((await fetch(`${b}/payments/${pay.id}`)).status, 200);
   assert.strictEqual((await fetch(`${b}/payments/${pay.id}/refund`, { method: "POST" })).status, 200);
   assert.strictEqual((await fetch(`${b}/payments/${pay.id}/refund`, { method: "POST" })).status, 409);

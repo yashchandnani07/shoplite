@@ -3,5 +3,5 @@
   "version": "1.0.0",
   "private": true,
   "main": "src/server.js",
-  "dependencies": { "express": "^4.21.2", "money-utils": "^1.9.0", "shoplite-obs": "^1.0.0" }
+  "dependencies": { "express": "^4.21.2", "money-utils": "^2.0.0", "shoplite-obs": "^1.0.0" }
 }
