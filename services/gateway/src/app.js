@@ -9,6 +9,10 @@ function createApp({ ordersUrl = "http://orders:4002", paymentsUrl = "http://pay
   const metrics = new obs.Metrics("gateway");
   app.use(express.json({ limit: "100kb" }));
   obs.instrument(app, { service: "gateway", logger, metrics, shipper });
+  app.use((_req, res, next) => {
+    res.setHeader("x-content-type-options", "nosniff");
+    next();
+  });
 
   const forward = (base, path, method = "GET") => async (req, res, next) => {
     try {
