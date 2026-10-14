@@ -1,4 +1,6 @@
 name: verify
+# Kaizen finds its verification runs by this title (workflow_run display_title)
+run-name: verify ${{ inputs.ref }}
 on:
   workflow_call:
     inputs:
